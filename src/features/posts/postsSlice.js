@@ -1,7 +1,8 @@
 import { createSlice, nanoid, createAsyncThunk } from "@reduxjs/toolkit";
 import { sub } from "date-fns";
-const POST_URL = "https://jsonplaceholder.typicode.com/posts";
 import axios from "axios";
+
+const POST_URL = "https://jsonplaceholder.typicode.com/posts";
 
 const initialState = {
   posts: [],
@@ -11,8 +12,20 @@ const initialState = {
 
 export const fetchPosts = createAsyncThunk("posts/fetchPosts", async () => {
   const response = await axios.get(POST_URL);
-  return [...response.data];
+  return response.data;
 });
+
+export const addNewPost = createAsyncThunk(
+  "posts/addNewPost",
+  async (initialPost) => {
+    try {
+      const response = await axios.post(POST_URL, initialPost);
+      return response.data;
+    } catch (err) {
+      return err.message;
+    }
+  }
+);
 
 const postsSlice = createSlice({
   name: "posts",
@@ -62,23 +75,38 @@ const postsSlice = createSlice({
           post.date = sub(new Date(), { minutes: min++ }).toISOString();
           post.reactions = {
             thumbsUp: 0,
-            hooray: 0,
+            wow: 0,
             heart: 0,
             rocket: 0,
-            eyes: 0,
+            coffee: 0,
           };
           return post;
         });
-        state.posts = state.posts.concat(loadedPosts);
+        state.posts = loadedPosts;
       })
       .addCase(fetchPosts.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.error.message;
+      })
+      .addCase(addNewPost.fulfilled, (state, action) => {
+        action.payload.userId = Number(action.payload.userId);
+        action.payload.date = new Date().toISOString();
+        action.payload.reactions = {
+          thumbsUp: 0,
+          wow: 0,
+          heart: 0,
+          rocket: 0,
+          coffee: 0,
+        };
+        console.log(action.payload);
+        state.posts.push(action.payload);
       });
   },
 });
 
 export const selectAllPosts = (state) => state.posts.posts;
+export const getPostsStatus = (state) => state.posts.status;
+export const getPostsError = (state) => state.posts.error;
 
 export const { postAdded, reactionAdded } = postsSlice.actions;
 
